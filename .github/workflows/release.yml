@@ -1,9 +1,13 @@
 on:
   push:
     tags:
-      - '*.RELEASE'
+      - '*'
 
 name: Create Release
+
+permissions:
+  packages: write
+  contents: write
 
 jobs:
   release:
@@ -44,6 +48,15 @@ jobs:
           asset_path: ./build/epub-translator-runner.jar
           asset_name: epub-translator-runner.jar
           asset_content_type: application/java-archive
+
+      - name: build & push to GitHub Container Registry
+        run: |
+          TAG="ghcr.io/${{ github.repository }}:$(date -u '+%Y%m%d%H%M%S')"
+          docker build -f src/main/docker/Dockerfile.jvm -t  "${TAG}" .
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login -u "${{ github.actor }}" --password-stdin ghcr.io
+          docker push "${TAG}"
+        env:
+          DOCKER_BUILDKIT: 1
 
 #      - name: Upload release executable asset
 #        uses: actions/upload-release-asset@v1
